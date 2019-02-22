@@ -4,15 +4,17 @@ import torch as th
 import os
 import dgl
 
-def collate(samples):
-    graphs, labels, seq_len = map(list, zip(*samples))
-    batched_graph = dgl.batch(graphs)
-    max_len = max(map(len, labels))
-    batch_size = len(labels)
-    pad_labels = th.zeros(batch_size, max_len)
-    for i, l in enumerate(labels):
-        pad_labels[i, :seq_len[i]] = th.tensor(labels[i])
-    return batched_graph, pad_labels, th.tensor(seq_len).long()
+def collate(device):
+    def collate_dev(samples):
+        graphs, labels, seq_len = map(list, zip(*samples))
+        batched_graph = dgl.batch(graphs)
+        max_len = max(map(len, labels))
+        batch_size = len(labels)
+        pad_labels = th.zeros(batch_size, max_len)
+        for i, l in enumerate(labels):
+            pad_labels[i, :seq_len[i]] = th.tensor(labels[i])
+        return batched_graph, pad_labels.to(device), th.tensor(seq_len).long().to(device)
+    return collate_dev
 
 class StrokeDataset(object):
     """IAMonDo dataset class."""
