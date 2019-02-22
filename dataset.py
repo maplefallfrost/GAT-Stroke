@@ -51,13 +51,13 @@ class StrokeDataset(object):
             feature_graph.ndata['x'] = th.FloatTensor(f)
             src, dst = map(list, zip(*e))
             feature_graph.add_edges(src, dst)
+            feature_graph.add_edges(feature_graph.nodes(), feature_graph.nodes())
             self.feature_graphs.append(feature_graph)
             
             label_graph = dgl.DGLGraph()
             assert f.shape[0] == l.shape[0]
             label_graph.add_nodes(l.shape[0])
             label_graph.ndata['y'] = th.LongTensor(l)
-            label_graph.add_edges(src, dst)
             self.label_graphs.append(label_graph)
     
     def __len__(self):
