@@ -24,13 +24,17 @@ class GraphAttention(nn.Module):
         else:
             self.attn_drop = lambda x: x
         
+        self.leaky_relu = nn.LeakyReLU(alpha)
         self.attn_l = nn.Parameter(torch.Tensor(size=(num_heads, out_dim, 1)))
         self.attn_r = nn.Parameter(torch.Tensor(size=(num_heads, out_dim, 1)))
-        self.attn_e = nn.Linear(edge_f_dim, num_heads)
+        self.attn_e = nn.Sequential(
+            nn.Linear(edge_f_dim, out_dim),
+            self.leaky_relu,
+            nn.Linear(out_dim, num_heads)
+        )
         nn.init.xavier_normal_(self.fc.weight.data, gain=1.414)
         nn.init.xavier_normal_(self.attn_l.data, gain=1.414)
         nn.init.xavier_normal_(self.attn_r.data, gain=1.414)
-        self.leaky_relu = nn.LeakyReLU(alpha)
         self.residual = residual
         
         if residual:
@@ -63,7 +67,7 @@ class GraphAttention(nn.Module):
                 resval = self.res_fc(h).reshape((h.shape[0], self.num_heads, -1))
             else:
                 resval = torch.unsqueeze(h, 1)
-            ret = resval + ret
+            ret = ret + resval
         return ret
    
     def edge_attention(self, edges):
