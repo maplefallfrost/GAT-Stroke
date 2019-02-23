@@ -6,12 +6,9 @@ from train import train
 from zoopt import Dimension, Objective, Parameter, Opt, Solution
 from zoopt.utils.zoo_global import gl
 
-def setting():
-    parser = argparse.ArgumentParser(description='GAT')
+def setting(parser):
     parser.add_argument("--data_dir", type=str, default="./data",
                         help="The directory of data")
-    parser.add_argument("--edge_dir", type=str, default="./edge/time_space_lateral",
-                        help="The directory of edge and binary feature")
     parser.add_argument("--num_classes", type=int, default=2,
                         help="The number of labels(2 or 5)")
     parser.add_argument("--gpu", type=int, default=0,
@@ -57,8 +54,8 @@ def solution_to_hyper_param(x, args):
 best_acc = 0
 best_hyper_params = None
 
-def valid_loss(x):
-    args = setting()
+def valid_loss(x, parser):
+    args = setting(parser)
     hyper_param = solution_to_hyper_param(x, args)
     print("cur hyperparameter:")
     print(hyper_param)
@@ -76,7 +73,7 @@ def valid_loss(x):
     print(best_hyper_params)
     return value
 
-def hyper_param_opt():
+def hyper_param_opt(parser):
     
     gl.set_seed(int(time.time()))
     np.random.seed(int(time.time()))
@@ -85,8 +82,8 @@ def hyper_param_opt():
     num_out_heads = list(range(0, 4))
     num_layers = list(range(1, 8))
     num_hidden = list(range(3, 7))
-    in_drop = [0.0, 0.3]
-    attn_drop = [0.0, 0.3]
+    in_drop = [0.0, 0.5]
+    attn_drop = [0.0, 0.5]
     
     dim_size = 6
     dim_regs = [num_heads, num_out_heads, num_layers, num_hidden, in_drop, attn_drop]
@@ -104,7 +101,7 @@ def hyper_param_opt():
                 p = np.random.rand() * 0.3
                 init_sample.append(p)
         
-        valid_loss(init_sample)
+        valid_loss(init_sample, parser)
 #         dim = Dimension(dim_size, dim_regs, dim_tys)
 #         objective = Objective(valid_loss, dim)
 #         budget = 5
@@ -113,4 +110,7 @@ def hyper_param_opt():
 
 
 if __name__ == "__main__":
-    hyper_param_opt()
+    parser = argparse.ArgumentParser(description='GAT')
+    parser.add_argument("--edge_dir", type=str, default="./edge/time_space_lateral",
+                        help="The directory of edge and binary feature")
+    hyper_param_opt(parser)
