@@ -15,6 +15,7 @@ from evaluate import evaluate, print_result
 def train(args):
     
     data_dir = args.data_dir
+    edge_dir = args.edge_dir
     gpu = args.gpu
     node_f_dim = 23
     edge_f_dim = 19
@@ -37,9 +38,9 @@ def train(args):
     else:
         device = th.device("cpu")
         
-    trainset = StrokeDataset(os.path.join(data_dir, "train"), num_classes)
-    validset = StrokeDataset(os.path.join(data_dir, "valid"), num_classes)
-    testset = StrokeDataset(os.path.join(data_dir, "test"), num_classes)
+    trainset = StrokeDataset(data_dir, edge_dir, "train", num_classes)
+    validset = StrokeDataset(data_dir, edge_dir, "valid", num_classes)
+    testset = StrokeDataset(data_dir, edge_dir, "test", num_classes)
         
     train_loader = DataLoader(trainset,
                           batch_size=batch_size,
@@ -109,6 +110,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GAT')
     parser.add_argument("--data_dir", type=str, default="./data",
                         help="The directory of data")
+    parser.add_argument("--edge_dir", type=str, default="./edge/time_space_lateral",
+                        help="The directory of edge and binary feature")
     parser.add_argument("--num_classes", type=int, default=2,
                         help="The number of labels(2 or 5)")
     parser.add_argument("--gpu", type=int, default=0,
