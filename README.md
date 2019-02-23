@@ -2,7 +2,7 @@
 
 Graph attention network for stroke classification.
 
-## System Requirements
+### System Requirements
 
 all Linux distributions no earlier than Ubuntu 16.04
 
