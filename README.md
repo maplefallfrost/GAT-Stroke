@@ -2,7 +2,7 @@
 
 Graph attention network for stroke classification.
 
-### System Requirements
+### Requirements
 
 all Linux distributions no earlier than Ubuntu 16.04
 
@@ -13,3 +13,7 @@ PyTorch 1.0
 ### Installing
 
 pip install -r requirements.txt
+
+### Usage
+
+python -u hyparam.py | tee ./log.txt
