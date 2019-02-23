@@ -16,4 +16,8 @@ pip install -r requirements.txt
 
 ### Usage
 
+tar -jxvf data.tar.bz2
+
+tar -jxvf edge.tar.bz2
+
 python -u hyparam.py | tee ./log.txt
