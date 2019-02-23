@@ -10,6 +10,7 @@ def collate(device):
         batched_feature_graphs = dgl.batch(feature_graphs)
         batched_label_graphs = dgl.batch(label_graphs)
         batched_feature_graphs.ndata['x'] = batched_feature_graphs.ndata['x'].to(device)
+        batched_feature_graphs.edata['x'] = batched_feature_graphs.edata['x'].to(device)
         batched_label_graphs.ndata['y'] = batched_label_graphs.ndata['y'].to(device)
         return batched_feature_graphs, batched_label_graphs
     return collate_dev
@@ -22,14 +23,17 @@ class StrokeDataset(object):
         
         self.data_dir = data_dir
         self.stroke_feature_files = [x for x in all_files if x.endswith('.stroke_feature')]
+        self.binary_feature_files = [x for x in all_files if x.endswith('.binary_feature')]
         self.label_files = [x for x in all_files if x.endswith('.label%d' % num_classes)]
         self.edge_files = [x for x in all_files if x.endswith('.edge')]
         key = lambda x: int(x.split(".")[0])
         self.stroke_feature_files.sort(key=key)
+        self.binary_feature_files.sort(key=key)
         self.label_files.sort(key=key)
         self.edge_files.sort(key=key)
         
         self.stroke_features = self._get_content(self.stroke_feature_files)
+        self.binary_features = self._get_content(self.binary_feature_files)
         self.labels = self._get_content(self.label_files)
         self.edges = self._get_content(self.edge_files)
         
@@ -45,13 +49,15 @@ class StrokeDataset(object):
         return all_content
     
     def _gen_graph(self):
-        for f, l, e in zip(self.stroke_features, self.labels, self.edges):
+        for f, b, l, e in zip(self.stroke_features, self.binary_features, self.labels, self.edges):
             feature_graph = dgl.DGLGraph()
             feature_graph.add_nodes(f.shape[0])
             feature_graph.ndata['x'] = th.FloatTensor(f)
             src, dst = map(list, zip(*e))
             feature_graph.add_edges(src, dst)
             feature_graph.add_edges(feature_graph.nodes(), feature_graph.nodes())
+            feature_graph.set_e_initializer(dgl.init.zero_initializer)
+            feature_graph.edges[src, dst].data['x'] = th.FloatTensor(b)
             self.feature_graphs.append(feature_graph)
             
             label_graph = dgl.DGLGraph()
