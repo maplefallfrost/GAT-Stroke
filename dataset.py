@@ -16,22 +16,22 @@ def collate(device):
 
 class StrokeDataset(object):
     """IAMonDo dataset class."""
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, num_classes):
         super(StrokeDataset, self).__init__()
         all_files = os.listdir(data_dir)
         
         self.data_dir = data_dir
         self.stroke_feature_files = [x for x in all_files if x.endswith('.stroke_feature')]
-        self.label_files = [x for x in all_files if x.endswith('.label')]
-        self.time_edge_files = [x for x in all_files if x.endswith('.time_edge')]
+        self.label_files = [x for x in all_files if x.endswith('.label%d' % num_classes)]
+        self.edge_files = [x for x in all_files if x.endswith('.edge')]
         key = lambda x: int(x.split(".")[0])
         self.stroke_feature_files.sort(key=key)
         self.label_files.sort(key=key)
-        self.time_edge_files.sort(key=key)
+        self.edge_files.sort(key=key)
         
         self.stroke_features = self._get_content(self.stroke_feature_files)
         self.labels = self._get_content(self.label_files)
-        self.time_edges = self._get_content(self.time_edge_files)
+        self.edges = self._get_content(self.edge_files)
         
         self.feature_graphs = []
         self.label_graphs = []
@@ -45,7 +45,7 @@ class StrokeDataset(object):
         return all_content
     
     def _gen_graph(self):
-        for f, l, e in zip(self.stroke_features, self.labels, self.time_edges):
+        for f, l, e in zip(self.stroke_features, self.labels, self.edges):
             feature_graph = dgl.DGLGraph()
             feature_graph.add_nodes(f.shape[0])
             feature_graph.ndata['x'] = th.FloatTensor(f)
