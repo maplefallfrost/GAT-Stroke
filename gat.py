@@ -32,7 +32,7 @@ class GraphAttention(nn.Module):
         self.residual = residual
         
         if residual:
-            if in_dim != out_dim:
+            if in_dim != out_dim * num_heads:
                 self.res_fc = nn.Linear(in_dim, num_heads * out_dim, bias=False)
                 nn.init.xavier_normal_(self.res_fc.weight.data, gain=1.414)
             else:
