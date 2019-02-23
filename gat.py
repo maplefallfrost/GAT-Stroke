@@ -32,7 +32,7 @@ class GraphAttention(nn.Module):
         self.residual = residual
         
         if residual:
-            if in_dim != out_dim * num_heads:
+            if in_dim != out_dim:
                 self.res_fc = nn.Linear(in_dim, num_heads * out_dim, bias=False)
                 nn.init.xavier_normal_(self.res_fc.weight.data, gain=1.414)
             else:
@@ -102,7 +102,7 @@ class GAT(nn.Module):
         for l in range(1, num_layers):
             # due to multi-head, the in_dim = num_hidden * num_heads
             self.gat_layers.append(GraphAttention(
-                num_hidden * heads[l-1], num_hidden, heads[1],
+                num_hidden * heads[l-1], num_hidden, heads[l],
                 feat_drop, attn_drop, alpha, residual))
         # output projection
         self.gat_layers.append(GraphAttention(
