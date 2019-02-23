@@ -17,34 +17,42 @@ def collate(device):
 
 class StrokeDataset(object):
     """IAMonDo dataset class."""
-    def __init__(self, data_dir, num_classes):
+    def __init__(self, data_dir, edge_dir, set_type, num_classes):
         super(StrokeDataset, self).__init__()
-        all_files = os.listdir(data_dir)
+        data_dir = os.path.join(data_dir, set_type)
+        edge_dir = os.path.join(edge_dir, set_type)
+        all_data_files = os.listdir(data_dir)
+        all_edge_files = os.listdir(edge_dir)
         
         self.data_dir = data_dir
-        self.stroke_feature_files = [x for x in all_files if x.endswith('.stroke_feature')]
-        self.binary_feature_files = [x for x in all_files if x.endswith('.binary_feature')]
-        self.label_files = [x for x in all_files if x.endswith('.label%d' % num_classes)]
-        self.edge_files = [x for x in all_files if x.endswith('.edge')]
+        self.edge_dir = edge_dir
+        self.stroke_feature_files = [x for x in all_data_files if x.endswith('.stroke_feature')]
+        self.binary_feature_files = [x for x in all_edge_files if x.endswith('.binary_feature')]
+        self.label_files = [x for x in all_data_files if x.endswith('.label%d' % num_classes)]
+        self.edge_files = [x for x in all_edge_files if x.endswith('.edge')]
         key = lambda x: int(x.split(".")[0])
         self.stroke_feature_files.sort(key=key)
         self.binary_feature_files.sort(key=key)
         self.label_files.sort(key=key)
         self.edge_files.sort(key=key)
         
-        self.stroke_features = self._get_content(self.stroke_feature_files)
-        self.binary_features = self._get_content(self.binary_feature_files)
-        self.labels = self._get_content(self.label_files)
-        self.edges = self._get_content(self.edge_files)
+        self.stroke_features = self._get_content(self.stroke_feature_files,
+                                                 self.data_dir)
+        self.binary_features = self._get_content(self.binary_feature_files,
+                                                 self.edge_dir)
+        self.labels = self._get_content(self.label_files,
+                                        self.data_dir)
+        self.edges = self._get_content(self.edge_files,
+                                       self.edge_dir)
         
         self.feature_graphs = []
         self.label_graphs = []
         self._gen_graph()
     
-    def _get_content(self, files):
+    def _get_content(self, files, prefix):
         all_content = []
         for f in files:
-            cur_content = np.loadtxt(os.path.join(self.data_dir, f))
+            cur_content = np.loadtxt(os.path.join(prefix, f))
             all_content.append(cur_content)
         return all_content
     
