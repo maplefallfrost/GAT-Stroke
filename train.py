@@ -1,83 +1,143 @@
+import torch as th
 import os
-import torch
-import random
+import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import batchify
-from tqdm import tqdm_notebook
-from torch.nn.utils import clip_grad_norm
+import argparse
 
-def neg_log_likelihood_loss(score, label, average_batch):
-    batch_size, seq_len = label.size(0), label.size(1)
-    score = score.view(batch_size*seq_len, -1)
-    label = label.view(batch_size*seq_len)
-    score = F.log_softmax(score, 1)
-    nll_loss = nn.NLLLoss(ignore_index=0, size_average=False)
-    total_loss = nll_loss(score, label)
-    if average_batch:
-        total_loss /= batch_size
-    return total_loss
+from dataset import StrokeDataset, collate
+from torch.utils.data import DataLoader
+from gcn import GCNNet
+from gat import GAT
+from evaluate import evaluate, print_result
 
-def lr_decay(optimizer, epoch, decay_rate, init_lr):
-    lr = init_lr / (1 + decay_rate * epoch)
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-    return optimizer
 
-def train(data, model, optimizer, loss_func, config):
-    train_batch_list, valid_batch_list, test_batch_list = data
-    num_train_sample = len(train_batch_list)
-    batch_size = config.batch_size
+def train(args):
     
-    model_name = model.__class__.__name__
-    optim_name = optimizer.__class__.__name__
-    model_load_dir = os.path.join(config.model_dir, "pretrained", model_name)
-    model_save_dir = os.path.join(config.model_dir, model_name)
-    optim_load_dir = os.path.join(config.model_dir, "pretrained", optim_name)
-    optim_save_dir = os.path.join(config.model_dir, optim_name)
+    data_dir = args.data_dir
+    gpu = args.gpu
+    node_f_dim = 23
+    edge_f_dim = 19
+    batch_size = args.batch_size
+    num_classes = args.num_classes
+    num_hidden = args.num_hidden
+    num_heads = args.num_heads
+    num_out_heads = args.num_out_heads
+    num_layers = args.num_layers
+    residual = args.residual
+    in_drop = args.in_drop
+    attn_drop = args.attn_drop
+    lr = args.lr
+    weight_decay = args.weight_decay
+    alpha = args.alpha
+    epochs = args.epochs
+    
+    if gpu >= 0:
+        device = th.device("cuda")
+    else:
+        device = th.device("cpu")
+        
+    trainset = StrokeDataset(os.path.join(data_dir, "train"), num_classes)
+    validset = StrokeDataset(os.path.join(data_dir, "valid"), num_classes)
+    testset = StrokeDataset(os.path.join(data_dir, "test"), num_classes)
+        
+    train_loader = DataLoader(trainset,
+                          batch_size=batch_size,
+                          shuffle=True,
+                          collate_fn=collate(device))
 
-    if os.path.exists(model_load_dir) and not config.train_from_scratch:
-        model.load_state_dict(torch.load(model_load_dir))
-    if os.path.exists(optim_load_dir) and not config.train_from_scratch:
-        optimizer.load_state_dict(torch.load(optim_load_dir))
+    valid_loader = DataLoader(validset,
+                              batch_size=batch_size,
+                              shuffle=False,
+                              collate_fn=collate(device))
 
-    best_valid_metric = 0
-    test_metric = 0
+    test_loader = DataLoader(testset,
+                             batch_size=batch_size,
+                             shuffle=False,
+                             collate_fn=collate(device))
+    
+    heads = ([num_heads] * num_layers) + [num_out_heads]
 
-    for epoch in tqdm_notebook(xrange(config.num_epoch)):
-        model.train()
+    model = GAT(num_layers, node_f_dim, edge_f_dim, num_hidden, num_classes,
+                heads, F.elu, in_drop, attn_drop, alpha, residual).to(device)
+    loss_func = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=10)
+
+    epoch_losses = []
+    best_valid_acc = 0
+    best_test_acc = 0
+    best_round = 0
+
+    for epoch in range(epochs):
         epoch_loss = 0
-        optimizer = lr_decay(optimizer, epoch, config.lr_decay, config.lr)
-        random.shuffle(train_batch_list)
-        for i in tqdm_notebook(xrange(0, num_train_sample, batch_size)):
-            end_idx = min(num_train_sample, i + batch_size)
-            cur_batch_list = train_batch_list[i:end_idx]
-            cur_batch = batchify(cur_batch_list, gpu=config.gpu)
-
+        for it, (fg, lg) in enumerate(train_loader):
+            logits = model(fg)
+            labels = lg.ndata['y']
+            loss = loss_func(logits, labels)
             optimizer.zero_grad()
-            if loss_func is not None:
-                output = model(cur_batch)
-                loss = loss_func(output, cur_batch['label_tensor'], config.average_batch)
-            else:
-                loss = model.loss(cur_batch)
-            
             loss.backward()
-            clip_grad_norm(model.parameters(), config.clip_value)
             optimizer.step()
-            epoch_loss += loss
+            epoch_loss += loss.detach().item()
 
-        print "Iteration %2d | Loss: %.6f | var_norm: %.3f | learning rate: %.6f" % (
-            epoch + 1,
-            epoch_loss / (num_train_sample / batch_size),
-            model.parameter_norm(),
-            optimizer.param_groups[0]['lr']
-        )
+        epoch_loss /= (it + 1)
+        print('Epoch {:3d}, loss {:4f}'.format(epoch, epoch_loss))
+        epoch_losses.append(epoch_loss)
 
-#         cur_valid_metric = evaluate(valid_batch_list, model, config)
-#         if cur_valid_metric > best_valid_metric:
-#             best_valid_metric = cur_valid_metric
-#             test_metric = evaluate(test_batch_list, model, config)
-#             if not os.path.exists(config.model_dir):
-#                 os.makedirs(config.model_dir)
-#             torch.save(model.state_dict(), model_save_dir)
-#             torch.save(optimizer.state_dict(), optim_save_dir)
+        train_acc, _= evaluate(model, train_loader, num_classes, "train")
+        valid_acc, _ = evaluate(model, valid_loader, num_classes, "valid")
+        if valid_acc > best_valid_acc:
+            test_acc, test_conf_mat = evaluate(model, test_loader, num_classes, "test")
+            if test_acc > best_test_acc:
+                best_test_acc = test_acc
+                best_conf_mat = test_conf_mat
+                best_round = epoch
+                
+        scheduler.step(valid_acc)
+        cur_learning_rate = optimizer.param_groups[0]['lr']
+        print('Learning rate: {:10f}'.format(cur_learning_rate))
+        if cur_learning_rate <= 1e-6:
+            break
+
+    print("Best round: %d" % best_round)
+    print_result(best_conf_mat)
+    
+    return best_test_acc
+
+if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser(description='GAT')
+    parser.add_argument("--data_dir", type=str, default="./data",
+                        help="The directory of data")
+    parser.add_argument("--num_classes", type=int, default=2,
+                        help="The number of labels(2 or 5)")
+    parser.add_argument("--gpu", type=int, default=0,
+                        help="which GPU to use. Set -1 to use CPU.")
+    parser.add_argument("--epochs", type=int, default=100,
+                        help="number of training epochs")
+    parser.add_argument("--batch_size", type=int, default=32,
+                        help="batch size")
+    parser.add_argument("--num_heads", type=int, default=8,
+                        help="number of hidden attention heads")
+    parser.add_argument("--num_out_heads", type=int, default=8,
+                        help="number of output attention heads")
+    parser.add_argument("--num_layers", type=int, default=5,
+                        help="number of hidden layers")
+    parser.add_argument("--num_hidden", type=int, default=8,
+                        help="number of hidden units")
+    parser.add_argument("--residual", action="store_true", default=True,
+                        help="use residual connection")
+    parser.add_argument("--in_drop", type=float, default=.0,
+                        help="input feature dropout")
+    parser.add_argument("--attn_drop", type=float, default=.2,
+                        help="attention dropout")
+    parser.add_argument("--lr", type=float, default=0.005,
+                        help="learning rate")
+    parser.add_argument('--weight_decay', type=float, default=5e-4,
+                        help="weight decay")
+    parser.add_argument('--alpha', type=float, default=0.2,
+                        help="the negative slope of leaky relu")
+    args = parser.parse_args()
+    
+    print(args)
+    train(args)
