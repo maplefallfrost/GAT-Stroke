@@ -6,9 +6,12 @@ from train import train
 from zoopt import Dimension, Objective, Parameter, Opt, Solution
 from zoopt.utils.zoo_global import gl
 
-def setting(parser):
+def setting(edge_dir):
+    parser = argparse.ArgumentParser(description='GAT')
     parser.add_argument("--data_dir", type=str, default="./data",
                         help="The directory of data")
+    parser.add_argument("--edge_dir", type=str, default=edge_dir,
+                        help="The directory of edge and binary feature")
     parser.add_argument("--num_classes", type=int, default=2,
                         help="The number of labels(2 or 5)")
     parser.add_argument("--gpu", type=int, default=0,
@@ -54,8 +57,8 @@ def solution_to_hyper_param(x, args):
 best_acc = 0
 best_hyper_params = None
 
-def valid_loss(x, parser):
-    args = setting(parser)
+def valid_loss(x, edge_dir):
+    args = setting(edge_dir)
     hyper_param = solution_to_hyper_param(x, args)
     print("cur hyperparameter:")
     print(hyper_param)
@@ -110,7 +113,8 @@ def hyper_param_opt(parser):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='GAT')
-    parser.add_argument("--edge_dir", type=str, default="./edge/time_space_lateral",
+    edge_parser = argparse.ArgumentParser(description='GAT')
+    edge_parser.add_argument("--edge_dir", type=str, default="./edge/time_space_lateral",
                         help="The directory of edge and binary feature")
-    hyper_param_opt(parser)
+    edge_args = edge_parser.parse_args()
+    hyper_param_opt(edge_args.edge_dir)
