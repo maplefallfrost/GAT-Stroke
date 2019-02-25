@@ -37,7 +37,7 @@ def evaluate(model, loader, num_classes, name):
         labels = lg.ndata['y']
         predictions = predictions.cpu().numpy()
         labels = labels.cpu().numpy()
-        count += confusion_matrix(labels, predictions)
+        count += confusion_matrix(labels, predictions, labels=list(range(num_classes)))
     model.train()
     
     print_result(count)
