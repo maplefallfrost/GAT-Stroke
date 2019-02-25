@@ -36,6 +36,7 @@ class GraphAttention(nn.Module):
         nn.init.xavier_normal_(self.attn_l.data, gain=1.414)
         nn.init.xavier_normal_(self.attn_r.data, gain=1.414)
         self.residual = residual
+        self.batch_norm = nn.BatchNorm1d(num_heads * out_dim)
         
         if residual:
             if in_dim != out_dim:
@@ -44,7 +45,7 @@ class GraphAttention(nn.Module):
             else:
                 self.res_fc = None
     
-    def forward(self, g, inputs):
+    def forward(self, g, inputs, last=False):
         # prepare
         h = self.feat_drop(inputs) # NxD
         ft = self.fc(h).reshape((h.shape[0], self.num_heads, -1)) # NxHxD'
@@ -68,6 +69,10 @@ class GraphAttention(nn.Module):
             else:
                 resval = torch.unsqueeze(h, 1)
             ret = ret + resval
+        if last == False:
+            ret = self.batch_norm(ret.flatten(1))
+        else:
+            ret = ret.mean(1)
         return ret
    
     def edge_attention(self, edges):
@@ -120,8 +125,8 @@ class GAT(nn.Module):
     def forward(self, g):
         h = g.ndata['x']
         for l in range(self.num_layers):
-            h = self.gat_layers[l](g, h).flatten(1)
+            h = self.gat_layers[l](g, h, last=False).flatten(1)
             h = self.activation(h)
         # output projection
-        logits = self.gat_layers[-1](g, h).mean(1)
+        logits = self.gat_layers[-1](g, h, last=True)
         return logits
