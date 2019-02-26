@@ -10,9 +10,9 @@ def setting(edge_dir):
     parser = argparse.ArgumentParser(description='GAT')
     parser.add_argument("--data_dir", type=str, default="./data",
                         help="The directory of data")
-    parser.add_argument("--edge_dir", type=str, default=edge_dir,
+    parser.add_argument("--edge_dir", type=str, default="./edge/time_space_lateral",
                         help="The directory of edge and binary feature")
-    parser.add_argument("--num_classes", type=int, default=2,
+    parser.add_argument("--num_classes", type=int, default=5,
                         help="The number of labels(2 or 5)")
     parser.add_argument("--gpu", type=int, default=0,
                         help="which GPU to use. Set -1 to use CPU.")
@@ -22,25 +22,34 @@ def setting(edge_dir):
                         help="batch size")
     parser.add_argument("--num_heads", type=int, default=8,
                         help="number of hidden attention heads")
-    parser.add_argument("--num_out_heads", type=int, default=8,
+    parser.add_argument("--num_out_heads", type=int, default=2,
                         help="number of output attention heads")
-    parser.add_argument("--num_layers", type=int, default=1,
+    parser.add_argument("--num_layers", type=int, default=5,
                         help="number of hidden layers")
-    parser.add_argument("--num_hidden", type=int, default=8,
+    parser.add_argument("--num_hidden", type=int, default=32,
                         help="number of hidden units")
     parser.add_argument("--residual", action="store_true", default=True,
                         help="use residual connection")
-    parser.add_argument("--in_drop", type=float, default=.0,
+    parser.add_argument("--in_drop", type=float, default=.2,
                         help="input feature dropout")
-    parser.add_argument("--attn_drop", type=float, default=.1,
+    parser.add_argument("--attn_drop", type=float, default=0,
                         help="attention dropout")
+    parser.add_argument("--smooth_eps", type=float, default=0.0,
+                        help="label smooth epsilon")
+    parser.add_argument("--optim_type", type=str, default='adam',
+                        help="Optimizer(adam/sgd)")
+    parser.add_argument("--momentum", type=float, default=0.9,
+                        help="momentum in sgd")
     parser.add_argument("--lr", type=float, default=0.005,
                         help="learning rate")
+    parser.add_argument("--patience", type=int, default=10,
+                        help="parameter in optim scheduler")
     parser.add_argument('--weight_decay', type=float, default=5e-4,
                         help="weight decay")
     parser.add_argument('--alpha', type=float, default=0.2,
                         help="the negative slope of leaky relu")
     args = parser.parse_args()
+    
     return args
 
 def solution_to_hyper_param(x, args):
@@ -60,7 +69,7 @@ best_hyper_params = None
 def valid_loss(x, edge_dir):
     args = setting(edge_dir)
     hyper_param = solution_to_hyper_param(x, args)
-    print("cur hyperparameter:")
+    print("cur hyperparameter:", end=" ")
     print(hyper_param)
     value = -train(hyper_param)
     print("cur acc: %.4f" % -value)
@@ -72,7 +81,7 @@ def valid_loss(x, edge_dir):
         best_hyper_params = hyper_param
 
     print("cur best acc: %.4f" % best_acc)
-    print("cur best hyperparameter:")
+    print("cur best hyperparameter:", end=" ")
     print(best_hyper_params)
     return value
 
@@ -83,8 +92,8 @@ def hyper_param_opt(parser):
 
     num_heads = list(range(0, 5))
     num_out_heads = list(range(0, 4))
-    num_layers = list(range(1, 8))
-    num_hidden = list(range(3, 7))
+    num_layers = list(range(4, 11))
+    num_hidden = list(range(3, 6))
     in_drop = [0.0, 0.5]
     attn_drop = [0.0, 0.5]
     
