@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from gcn import GCNNet
 from gat import GAT
 from evaluate import evaluate, print_result
+from cross_entropy import CrossEntropyLoss
 
 
 def train(args):
@@ -29,10 +30,14 @@ def train(args):
     residual = args.residual
     in_drop = args.in_drop
     attn_drop = args.attn_drop
+    optim_type = args.optim_type
+    momentum = args.momentum
     lr = args.lr
+    patience = args.patience
     weight_decay = args.weight_decay
     alpha = args.alpha
     epochs = args.epochs
+    smooth_eps = args.smooth_eps
     
     if gpu >= 0:
         device = th.device("cuda")
@@ -71,9 +76,14 @@ def train(args):
                 attn_drop,
                 alpha,
                 residual).to(device)
-    loss_func = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=10)
+    # loss_func = nn.CrossEntropyLoss()
+    loss_func = CrossEntropyLoss(smooth_eps=smooth_eps)
+    if optim_type == 'adam':
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+    elif optim_type == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+        
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=patience)
 
     epoch_losses = []
     best_valid_acc = 0
@@ -126,32 +136,40 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GAT')
     parser.add_argument("--data_dir", type=str, default="./data",
                         help="The directory of data")
-    parser.add_argument("--edge_dir", type=str, default="./edge/time_space_lateral",
+    parser.add_argument("--edge_dir", type=str, default="./edge/time_space",
                         help="The directory of edge and binary feature")
     parser.add_argument("--num_classes", type=int, default=2,
                         help="The number of labels(2 or 5)")
     parser.add_argument("--gpu", type=int, default=0,
                         help="which GPU to use. Set -1 to use CPU.")
-    parser.add_argument("--epochs", type=int, default=100,
+    parser.add_argument("--epochs", type=int, default=200,
                         help="number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16,
                         help="batch size")
     parser.add_argument("--num_heads", type=int, default=8,
                         help="number of hidden attention heads")
-    parser.add_argument("--num_out_heads", type=int, default=8,
+    parser.add_argument("--num_out_heads", type=int, default=2,
                         help="number of output attention heads")
     parser.add_argument("--num_layers", type=int, default=5,
                         help="number of hidden layers")
-    parser.add_argument("--num_hidden", type=int, default=8,
+    parser.add_argument("--num_hidden", type=int, default=32,
                         help="number of hidden units")
     parser.add_argument("--residual", action="store_true", default=True,
                         help="use residual connection")
     parser.add_argument("--in_drop", type=float, default=.2,
                         help="input feature dropout")
-    parser.add_argument("--attn_drop", type=float, default=.2,
+    parser.add_argument("--attn_drop", type=float, default=0,
                         help="attention dropout")
+    parser.add_argument("--smooth_eps", type=float, default=0.0,
+                        help="label smooth epsilon")
+    parser.add_argument("--optim_type", type=str, default='adam',
+                        help="Optimizer(adam/sgd)")
+    parser.add_argument("--momentum", type=float, default=0.9,
+                        help="momentum in sgd")
     parser.add_argument("--lr", type=float, default=0.005,
                         help="learning rate")
+    parser.add_argument("--patience", type=int, default=10,
+                        help="parameter in optim scheduler")
     parser.add_argument('--weight_decay', type=float, default=5e-4,
                         help="weight decay")
     parser.add_argument('--alpha', type=float, default=0.2,
