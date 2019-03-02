@@ -11,9 +11,13 @@ class GraphAttention(nn.Module):
              feat_drop,
              attn_drop,
              alpha,
-             residual=False):
+             temperature,
+             edge_feature_attn,
+             residual):
         super(GraphAttention, self).__init__()
         self.num_heads = num_heads
+        self.temperature = temperature
+        self.edge_feature_attn = edge_feature_attn
         self.fc = nn.Linear(in_dim, num_heads * out_dim, bias=False)
         if feat_drop:
             self.feat_drop = nn.Dropout(feat_drop)
@@ -69,6 +73,7 @@ class GraphAttention(nn.Module):
             else:
                 resval = torch.unsqueeze(h, 1)
             ret = ret + resval
+        # 5. batch norm:
         if last == False:
             ret = self.batch_norm(ret.flatten(1))
         else:
@@ -77,8 +82,12 @@ class GraphAttention(nn.Module):
    
     def edge_attention(self, edges):
         # an edge UDF to compute unnormalized attention values from src and dst
-        e_attn = self.attn_e(edges.data['x']).unsqueeze(-1)
-        a = self.leaky_relu(e_attn + edges.src['a1'] + edges.dst['a2'])
+        a = edges.src['a1'] + edges.dst['a2']
+        if self.edge_feature_attn:
+            e_attn = self.attn_e(edges.data['x']).unsqueeze(-1)
+            a = a + e_attn
+        a = self.leaky_relu(a)
+        a = a * self.temperature
         return {'a': a}
     
     def edge_softmax(self, g):
@@ -103,6 +112,8 @@ class GAT(nn.Module):
              feat_drop,
              attn_drop,
              alpha,
+             temperature,
+             edge_feature_attn,
              residual):
         super(GAT, self).__init__()
         self.num_layers = num_layers
@@ -110,17 +121,18 @@ class GAT(nn.Module):
         self.activation = activation
         # input projection (no residual)
         self.gat_layers.append(GraphAttention(
-            in_dim, edge_f_dim, num_hidden, heads[0], feat_drop, attn_drop, alpha, False))
+            in_dim, edge_f_dim, num_hidden, heads[0],
+            feat_drop, attn_drop, alpha, temperature, edge_feature_attn, False))
         # hidden layers
         for l in range(1, num_layers):
             # due to multi-head, the in_dim = num_hidden * num_heads
             self.gat_layers.append(GraphAttention(
                 num_hidden * heads[l-1], edge_f_dim, num_hidden, heads[l],
-                feat_drop, attn_drop, alpha, residual))
+                feat_drop, attn_drop, alpha, temperature, edge_feature_attn, residual))
         # output projection
         self.gat_layers.append(GraphAttention(
             num_hidden * heads[-2], edge_f_dim, num_classes, heads[-1],
-            feat_drop, attn_drop, alpha, residual))
+            feat_drop, attn_drop, alpha, temperature, edge_feature_attn, residual))
     
     def forward(self, g):
         h = g.ndata['x']
