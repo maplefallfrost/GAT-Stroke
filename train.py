@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import argparse
 import time
+import adabound
 
 from dataset import StrokeDataset, collate
 from torch.utils.data import DataLoader
@@ -19,7 +20,10 @@ def train(args):
     data_dir = args.data_dir
     edge_dir = args.edge_dir
     gpu = args.gpu
-    node_f_dim = 23
+    if data_dir.split("/")[-1] == "no_context":
+        node_f_dim = 13
+    else:
+        node_f_dim = 23
     edge_f_dim = 19
     batch_size = args.batch_size
     num_classes = args.num_classes
@@ -38,6 +42,8 @@ def train(args):
     alpha = args.alpha
     epochs = args.epochs
     smooth_eps = args.smooth_eps
+    temperature = args.temperature
+    edge_feature_attn = args.edge_feature_attn
     
     if gpu >= 0:
         device = th.device("cuda")
@@ -75,6 +81,8 @@ def train(args):
                 in_drop,
                 attn_drop,
                 alpha,
+                temperature,
+                edge_feature_attn,
                 residual).to(device)
     # loss_func = nn.CrossEntropyLoss()
     loss_func = CrossEntropyLoss(smooth_eps=smooth_eps)
@@ -82,6 +90,8 @@ def train(args):
         optimizer = optim.Adam(model.parameters(), lr=lr)
     elif optim_type == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+    elif optim_type == 'adabound':
+        optimizer = adabound.AdaBound(model.parameters(), lr=lr, final_lr=lr)
         
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=patience)
 
@@ -174,6 +184,10 @@ if __name__ == "__main__":
                         help="weight decay")
     parser.add_argument('--alpha', type=float, default=0.2,
                         help="the negative slope of leaky relu")
+    parser.add_argument("--temperature", type=float, default=1.0,
+                        help="temperature used in attention softmax")
+    parser.add_argument("--edge_feature_attn", action="store_true", default=False,
+                        help="whether use edge feature in attention")
     args = parser.parse_args()
     
     print(args)
