@@ -1,0 +1,21 @@
+2 labels
+layer
+1 97.80%
+2 98.18%
+3 98.43%
+4 98.63%
+
+no edge feature: 97.83%
+no attn: 97.14%
+alpha=0.5: 98.63%
+
+5 labels
+layer
+2 90.12%
+4 92.57%
+6 93.42%
+8 94.37%
+
+no edge feature: 91.60%
+no attn: 88.50%
+alpha=0.5: 94.37%
