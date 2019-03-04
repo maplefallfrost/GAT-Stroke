@@ -7,7 +7,8 @@ layer
 
 no edge feature: 97.83%
 no attn: 97.14%
-alpha=0.5: 98.63%
+no space: 98.00%(190doc/s, 10.39doc/s)
+alpha=0.5: 98.63%(105doc/s, 7.86doc/s)
 
 5 labels
 layer
@@ -18,4 +19,5 @@ layer
 
 no edge feature: 91.60%
 no attn: 88.50%
-alpha=0.5: 94.37%
+no space: 91.87%(102doc/s)
+alpha=0.5: 94.37%(65doc/s)
