@@ -3,21 +3,24 @@ layer
 1 97.80%
 2 98.18%
 3 98.43%
-4 98.63%
+4 98.55%(0.06)
+5 98.18%
 
-no edge feature: 97.83%
-no attn: 97.14%
-no space: 98.00%(190doc/s, 10.39doc/s)
-alpha=0.5: 98.63%(105doc/s, 7.86doc/s)
+no edge feature: 97.91%(0.05)
+no attn: 97.18%(0.07)
+no space: 98.52%(0.07)(0.30s)
+best: 98.55%(0.06), (0.45s)
 
 5 labels
 layer
 2 90.12%
 4 92.57%
 6 93.42%
-8 94.37%
+8 94.44%(0.21)
+10 94.92%
 
-no edge feature: 91.60%
+no edge feature: 91.58%(0.17)
 no attn: 88.50%
-no space: 91.87%(102doc/s)
-alpha=0.5: 94.37%(65doc/s)
+no space: 91.94%(0.16), (102doc/s)
+best: 94.44%(0.21), (65doc/s)
+best: 94.92, (1.10s)
