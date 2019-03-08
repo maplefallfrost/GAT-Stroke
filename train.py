@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import argparse
 import time
 import adabound
+import numpy as np
 
 from dataset import StrokeDataset, collate
 from torch.utils.data import DataLoader
@@ -60,12 +61,12 @@ def train(args):
                               collate_fn=collate(device))
 
     valid_loader = DataLoader(validset,
-                              batch_size=batch_size,
+                              batch_size=64,
                               shuffle=False,
                               collate_fn=collate(device))
 
     test_loader = DataLoader(testset,
-                             batch_size=batch_size,
+                             batch_size=64,
                              shuffle=False,
                              collate_fn=collate(device))
     
@@ -137,9 +138,18 @@ def train(args):
     print("Best round: %d" % best_round)
     print_result(best_conf_mat)
     duration = time.time() - start
-    print("Time cost: {:.4f}".format(duration))
+    print("Time cost: {:.4f}s".format(duration))
     
     return test_acc
+
+def multiple_train(args):
+    repeat = args.repeat
+    results = np.empty(shape=(repeat,))
+    for i in range(repeat):
+        results[i] = train(args)
+    print(results)
+    print("mean acc: %.5f%%" % np.mean(results))
+    print("std: %.5f%%" % np.std(results))
 
 if __name__ == "__main__":
     
@@ -188,7 +198,9 @@ if __name__ == "__main__":
                         help="temperature used in attention softmax")
     parser.add_argument("--edge_feature_attn", action="store_true", default=False,
                         help="whether use edge feature in attention")
+    parser.add_argument("--repeat", type=int, default=1,
+                        help="number of time for repeating experiments")
     args = parser.parse_args()
     
     print(args)
-    train(args)
+    multiple_train(args)
