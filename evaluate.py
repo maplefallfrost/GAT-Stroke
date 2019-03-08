@@ -1,6 +1,7 @@
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import torch as th
+import time
 
 def print_result(count):
     num_classes = count.shape[0]
@@ -31,15 +32,20 @@ def evaluate(model, loader, num_classes, name):
     model.eval()
     print(name + ":")
     count = np.zeros((num_classes, num_classes), dtype=np.int32)
+    duration = 0
     for it, (fg, lg) in enumerate(loader):
+        start = time.time()
         logits = model(fg)
         _, predictions = th.max(logits, dim=1)
+        duration += time.time() - start
         labels = lg.ndata['y']
         predictions = predictions.cpu().numpy()
         labels = labels.cpu().numpy()
         count += confusion_matrix(labels, predictions, labels=list(range(num_classes)))
+    
     model.train()
     
+    print("Time cost: {:.4f}s".format(duration))
     print_result(count)
     
     accuracy = 100. * count.trace() / max(1, count.sum())
