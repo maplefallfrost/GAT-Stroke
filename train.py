@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import argparse
 import time
-import adabound
 import numpy as np
 
 from dataset import StrokeDataset, collate
@@ -21,10 +20,7 @@ def train(args):
     data_dir = args.data_dir
     edge_dir = args.edge_dir
     gpu = args.gpu
-    if data_dir.split("/")[-1] == "no_context":
-        node_f_dim = 13
-    else:
-        node_f_dim = 23
+    node_f_dim = 23
     edge_f_dim = 19
     batch_size = args.batch_size
     num_classes = args.num_classes
