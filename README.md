@@ -14,10 +14,18 @@ PyTorch 1.0
 
 pip install -r requirements.txt
 
+### Data
+
+Download data.tar.gz and edge.tar.gz from
+
+https://drive.google.com/open?id=1-0tRJGNZGBWgmMJ6NIzUN8QY115MBLWO
+
+and put the data in the same directory of the code.
+
 ### Usage
 
-tar -jmxvf data.tar.bz2
+tar -zxvf data.tar.gz
 
-tar -jmxvf edge.tar.bz2
+tar -zxvf edge.tar.gz
 
-python -u hyparam.py | tee ./log.txt
+python train.py
