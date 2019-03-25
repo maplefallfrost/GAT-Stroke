@@ -9,7 +9,6 @@ import numpy as np
 
 from dataset import StrokeDataset, collate
 from torch.utils.data import DataLoader
-from gcn import GCNNet
 from gat import GAT
 from evaluate import evaluate, print_result
 from cross_entropy import CrossEntropyLoss
