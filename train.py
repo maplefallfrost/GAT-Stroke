@@ -87,8 +87,6 @@ def train(args):
         optimizer = optim.Adam(model.parameters(), lr=lr)
     elif optim_type == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
-    elif optim_type == 'adabound':
-        optimizer = adabound.AdaBound(model.parameters(), lr=lr, final_lr=lr)
         
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=patience)
 
