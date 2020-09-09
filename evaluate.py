@@ -1,7 +1,8 @@
-from sklearn.metrics import confusion_matrix
 import numpy as np
 import torch as th
 import time
+from sklearn.metrics import confusion_matrix
+from dataset import to_device
 
 def print_result(count):
     num_classes = count.shape[0]
@@ -27,15 +28,18 @@ def print_result(count):
     print ("Stroke accuracy: %i/%i (%.5f%%)" % (
         count.trace(), count.sum(), accuracy)
     )
+
     
-def evaluate(model, loader, num_classes, name):
+def evaluate(model, device, loader, num_classes, name):
     model.eval()
     print(name + ":")
     count = np.zeros((num_classes, num_classes), dtype=np.int32)
     duration = 0
-    for it, (fg, lg) in enumerate(loader):
+    for it, batch in enumerate(loader):
+        fg, lg = to_device(batch, device)
         start = time.time()
-        logits = model(fg)
+        with th.no_grad():
+            logits = model(fg)
         _, predictions = th.max(logits, dim=1)
         duration += time.time() - start
         labels = lg.ndata['y']
