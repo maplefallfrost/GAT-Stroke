@@ -60,19 +60,19 @@ class EGATLayer(nn.Module):
         node_graph.apply_edges(node_edge_attention)
         # 2. compute softmax in two parts: exp(x - max(x)) and sum(exp(x - max(x)))
         self.edge_softmax(node_graph)
-        # 2. compute the aggregated node features scaled by the dropped,
-        # unnormalized attention values.
+        # 3. compute the aggregated node features scaled by the dropped,
         node_graph.update_all(fn.src_mul_edge('ft', 'a_drop', 'ft'), fn.sum('ft', 'ft'))
-        # 3. apply normalizer
+        # 4. apply normalizer
         node_outputs = node_graph.ndata['ft'] / node_graph.ndata['z']
+        # 5. residual:
         node_outputs = node_outputs.flatten(1)
-        # 4. residual:
         if node_inputs.size(-1) == node_outputs.size(-1):
             node_outputs += node_inputs
-        # 5. batch norm:
+        # 6. batch norm:
         node_outputs = self.leaky_relu(node_outputs)
         node_outputs = self.node_batch_norm(node_outputs)
 
+        # 7. edge update
         if self.edge_update:
             node_graph.ndata.update({'h': node_outputs})
             node_graph.apply_edges(self.edge_update_fn)
