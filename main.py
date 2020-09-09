@@ -9,7 +9,7 @@ import numpy as np
 
 from dataset import StrokeDataset, collate, to_device
 from torch.utils.data import DataLoader
-from gat import GAT
+from egat import EGAT
 from evaluate import evaluate, print_result
 from cross_entropy import CrossEntropyLoss
 
@@ -20,7 +20,7 @@ def init_model(args):
         device = th.device("cpu")
 
     heads = [args.num_heads] * args.num_layers
-    model = GAT(args.num_layers,
+    model = EGAT(args.num_layers,
                 args.node_f_dim,
                 args.edge_f_dim,
                 args.num_hidden,
