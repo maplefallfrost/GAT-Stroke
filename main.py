@@ -11,7 +11,6 @@ from dataset import StrokeDataset, collate, to_device
 from torch.utils.data import DataLoader
 from egat import EGAT
 from evaluate import evaluate, print_result
-from cross_entropy import CrossEntropyLoss
 
 def init_model(args):
     if args.gpu >= 0:
@@ -86,7 +85,7 @@ def train(args):
         print('Epoch: {:3d}, loss: {:4f}, speed: {:.2f}doc/s'.format(
             epoch, epoch_loss, len(trainset) / epoch_duration))
 
-        train_acc, _= evaluate(model, device, train_loader, args.num_classes, "train")
+        train_acc, _ = evaluate(model, device, train_loader, args.num_classes, "train")
         valid_acc, _ = evaluate(model, device, valid_loader, args.num_classes, "valid")
         if valid_acc > best_valid_acc:
             best_valid_acc = valid_acc
