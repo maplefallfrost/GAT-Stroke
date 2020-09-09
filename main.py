@@ -117,12 +117,7 @@ def multiple_train(args):
 
 
 def test_evaluate(args):
-    if args.gpu >= 0:
-        device = th.device("cuda")
-    else:
-        device = th.device("cpu")
-
-    model = init_model(args)
+    model, device = init_model(args)
     model.eval()
     model.load_state_dict(th.load(args.model_path))
 
@@ -130,7 +125,7 @@ def test_evaluate(args):
     test_loader = DataLoader(testset,
                              batch_size=args.batch_size,
                              shuffle=False,
-                             collate_fn=collate(device))
+                             collate_fn=collate)
     test_acc, test_conf_mat = evaluate(model, device, test_loader, args.num_classes, "test")
 
 
