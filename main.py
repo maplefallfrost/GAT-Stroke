@@ -40,6 +40,9 @@ def train(args):
     validset = StrokeDataset(args.data_dir, args.edge_dir, "valid", args.num_classes)
     testset = StrokeDataset(args.data_dir, args.edge_dir, "test", args.num_classes)
 
+    model_dir, _ = os.path.split(args.model_path)
+    os.makedirs(model_dir, exist_ok=True)
+
     model, device = init_model(args)
     train_loader = DataLoader(trainset,
                               batch_size=args.batch_size,
@@ -121,7 +124,7 @@ def test_evaluate(args):
 
     model = init_model(args)
     model.eval()
-    model.load_state_dict(th.load(args.model_load_path))
+    model.load_state_dict(th.load(args.model_path))
 
     testset = StrokeDataset(args.data_dir, args.edge_dir, "test", args.num_classes)
     test_loader = DataLoader(testset,

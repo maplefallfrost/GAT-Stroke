@@ -1,6 +1,6 @@
 # GAT-Stroke
 
-Graph attention network for stroke classification.
+Edge graph attention network for stroke classification.
 
 ### Requirements
 
@@ -28,4 +28,8 @@ tar -zxvf data.tar.gz
 
 tar -zxvf edge.tar.gz
 
-python train.py
+### train
+python main.py --data_dir=data --edge_dir=edge/time_space --model_path=checkpoint/model.th --edge_feature_attn --edge_update --num_classes=2 --mode=train
+
+### eval
+python main.py --data_dir=data --edge_dir=edge/time_space --model_path=checkpoint/model.th --edge_feature_attn --edge_update --num_classes=2 --mode=eval
