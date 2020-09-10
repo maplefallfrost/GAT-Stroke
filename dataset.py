@@ -32,6 +32,7 @@ class StrokeDataset(object):
         
         self.data_dir = data_dir
         self.edge_dir = edge_dir
+        self.cache_data = cache_data
         self.stroke_feature_files = [x for x in all_data_files if x.endswith('.stroke_feature')]
         self.binary_feature_files = [x for x in all_edge_files if x.endswith('.binary_feature')]
         self.label_files = [x for x in all_data_files if x.endswith('.label%d' % num_classes)]
@@ -89,8 +90,11 @@ class StrokeDataset(object):
             edge = self._get_content(self.edge_files[idx], self.edge_dir)
 
             feature_graph, label_graph = self._get_graph(stroke_feature, binary_feature, label, edge)
-            self.feature_graphs[idx] = feature_graph
-            self.label_graphs[idx] = label_graph
+            if self.cache_data:
+                self.feature_graphs[idx] = feature_graph
+                self.label_graphs[idx] = label_graph
+        else:
+            feature_graph, label_graph = self.feature_graphs[idx], self.label_graphs[idx]
 
-        return self.feature_graphs[idx], self.label_graphs[idx]
+        return feature_graph, label_graph
     
